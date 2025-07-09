@@ -1,21 +1,23 @@
-# Stage 1: Build with Gradle
+# Stage 1: Build using Gradle image
 FROM gradle:7.6-jdk17 AS builder
-
 WORKDIR /app
 
-# Copy Gradle build files and source code
+# Copy source code
 COPY . .
 
-# Build the application
-RUN ./gradlew build --no-daemon
+# Run build
+RUN gradle build --no-daemon
 
-# Stage 2: Run with lightweight Java image
+# Stage 2: Create lightweight image with only the JAR
 FROM eclipse-temurin:17-jre
-
 WORKDIR /app
 
-# Copy only the JAR from the build stage
-COPY --from=builder /app/app/build/libs/*.jar app.jar
+# Copy the built JAR with fixed name
+COPY --from=builder /app/build/libs/app.jar app.jar
 
-# Run the application
+# Expose port (optional, depending on your app)
+EXPOSE 8080
+
+# Run the JAR
 ENTRYPOINT ["java", "-jar", "app.jar"]
+
