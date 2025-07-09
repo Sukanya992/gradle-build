@@ -1,34 +1,21 @@
-# Use official Gradle image with JDK 17
-FROM gradle:7.6-jdk17 as builder
+# Stage 1: Build with Gradle
+FROM gradle:7.6-jdk17 AS builder
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Copy only Gradle wrapper and build files first for better caching
-COPY mygradle/gradlew mygradle/gradlew
-COPY mygradle/gradle mygradle/gradle
-COPY mygradle/build.gradle mygradle/settings.gradle /app/mygradle/
-
-# Download dependencies (this improves layer caching)
-WORKDIR /app/mygradle
-RUN ./gradlew dependencies --no-daemon
-
-# Now copy the rest of the project
-COPY mygradle /app/mygradle
+# Copy Gradle build files and source code
+COPY . .
 
 # Build the application
 RUN ./gradlew build --no-daemon
 
-# --------------------------------------------------
-# Now create a lightweight image with only the JAR
-# --------------------------------------------------
-
+# Stage 2: Run with lightweight Java image
 FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Copy the JAR from the build stage
-COPY --from=builder /app/mygradle/app/build/libs/*.jar app.jar
+# Copy only the JAR from the build stage
+COPY --from=builder /app/app/build/libs/*.jar app.jar
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
